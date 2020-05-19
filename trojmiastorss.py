@@ -6,30 +6,47 @@ from rfeed import *
 import datetime
 import dateparser
 
-rssLink = 'tyrion.kw/rss'
-urls=['https://www.trojmiasto.pl/wiadomosci/', 'https://dom.trojmiasto.pl/archiwum/aktualnosci/']
+rssLink = 'https://rss.malpiszon.net/trojmiasto.pl/'
+url = 'https://www.trojmiasto.pl/wiadomosci/'
+skippedCategories = ['sport']
 arts = []
 
-for url in urls:
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'lxml')
+response = requests.get(url)
+soup = BeautifulSoup(response.text, 'lxml')
 
-    for art in soup.find_all('li', class_='arch-item'):
+for art in soup.find_all('li', class_='arch-item'):
+    category = art.find('div', class_='category').find('a').text.strip()
+    if category.lower() not in skippedCategories:
+        url = art.find('a').get('href')
+        imageElem = art.find('img')
+        image = Image(
+            url = imageElem.get('src'),
+            title = imageElem.get('alt'),
+            link = url
+        )
         item = Item(
             title = art.find('a', class_='color04').text.strip(),
-            link = art.find('a').get('href'),
+            link = url,
             description = art.find('div', class_='lead').text.strip(),
             author = 'Trojmiasto.pl',
+            comments = url + '#opinions-wrap',
+            categories = category,
             guid = Guid(art.find('a').get('href')),
             pubDate = dateparser.parse(art.find('span', class_='op-list').text.strip().splitlines()[0].strip(), languages=['pl'])
-        )
-        arts.append(item)
+    )
+    arts.append(item)
 
+favicon = Image(
+    url = 'https://static1.s-trojmiasto.pl/_img/favicon/favicon.ico',
+    title = 'Trojmiasto.pl favicon',
+    link = 'https://trojmiasto.pl'
+)
 feed = Feed(
     title = 'Trójmiasto.pl',
     link = rssLink,
     description = 'Wiadomości Trójmiasto.pl',
     language = 'pl-PL',
+    image = favicon,
     lastBuildDate = datetime.datetime.now(),
     items = arts
 )
