@@ -18,12 +18,6 @@ for art in soup.find_all('li', class_='arch-item'):
     category = art.find('div', class_='category').find('a').text.strip()
     if category.lower() not in skippedCategories:
         url = art.find('a').get('href')
-        imageElem = art.find('img')
-        image = Image(
-            url = imageElem.get('src'),
-            title = imageElem.get('alt'),
-            link = url
-        )
         item = Item(
             title = art.find('a', class_='color04').text.strip(),
             link = url,
@@ -33,8 +27,8 @@ for art in soup.find_all('li', class_='arch-item'):
             categories = category,
             guid = Guid(art.find('a').get('href')),
             pubDate = dateparser.parse(art.find('span', class_='op-list').text.strip().splitlines()[0].strip(), languages=['pl'])
-    )
-    arts.append(item)
+        )
+        arts.append(item)
 
 favicon = Image(
     url = 'https://static1.s-trojmiasto.pl/_img/favicon/favicon.ico',
