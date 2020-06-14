@@ -8,7 +8,7 @@ import dateparser
 
 rssLink = 'https://rss.malpiszon.net/trojmiasto.pl/'
 url = 'https://www.trojmiasto.pl/wiadomosci/'
-skippedCategories = ['sport']
+skippedCategories = ['sport', 'deluxe']
 arts = []
 
 response = requests.get(url)
@@ -22,25 +22,20 @@ for art in soup.find_all('li', class_='arch-item'):
             title = art.find('a', class_='color04').text.strip(),
             link = url,
             description = art.find('div', class_='lead').text.strip(),
-            author = 'Trojmiasto.pl',
+            author = 'Trojmiasto.pl (' + category + ')',
+            creator = 'by Trojmiasto.pl (' + category + ')',
             comments = url + '#opinions-wrap',
-            categories = category,
+            categories = [ category ],
             guid = Guid(art.find('a').get('href')),
             pubDate = dateparser.parse(art.find('span', class_='op-list').text.strip().splitlines()[0].strip(), languages=['pl'])
         )
         arts.append(item)
 
-favicon = Image(
-    url = 'https://static1.s-trojmiasto.pl/_img/favicon/favicon.ico',
-    title = 'Trojmiasto.pl favicon',
-    link = 'https://trojmiasto.pl'
-)
 feed = Feed(
     title = 'Trójmiasto.pl',
     link = rssLink,
-    description = 'Wiadomości Trójmiasto.pl',
+    description = 'Kanał RSS dla Trójmiasto.pl',
     language = 'pl-PL',
-    image = favicon,
     lastBuildDate = datetime.datetime.now(),
     items = arts
 )
