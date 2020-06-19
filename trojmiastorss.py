@@ -8,24 +8,33 @@ import dateparser
 
 rssLink = 'https://rss.malpiszon.net/trojmiasto.pl/'
 url = 'https://www.trojmiasto.pl/wiadomosci/'
+limit = 10
 skippedCategories = ['sport', 'deluxe']
 arts = []
 
 articles= requests.get(url)
 articlesSoup = BeautifulSoup(articles.text, 'lxml')
 
-for art in articlesSoup.find_all('li', class_='arch-item'):
+for index, art in zip(range(limit), articlesSoup.find_all('li', class_='arch-item')):
     category = art.find('div', class_='category').find('a').text.strip()
     if category.lower() not in skippedCategories:
         url = art.find('a').get('href')
         dateOpinions = art.find('span', class_='op-list')
-        opinions = '' if dateOpinions.find('strong') == None else ', ' + dateOpinions.find('strong').text + ' opinii'
-        sponsored = '' if art.find('h4').find('img', class_='art-sponsorowany') == None else ', SPONSOROWANY'
+        opinionsText = '' if dateOpinions.find('strong') == None else ', ' + dateOpinions.find('strong').text + ' opinii'
+        notSponsored = art.find('h4').find('img', class_='art-sponsorowany') == None
+        sponsoredText = '' if notSponsored else ', SPONSOROWANY'
+        author = '?'
+        description = art.find('div', class_='lead').text.strip()
+        if notSponsored:
+            articleFull = requests.get(url)
+            articleFullSoup = BeautifulSoup(articleFull.text, 'lxml')
+            author = articleFullSoup.find('span', class_='article-author').find('strong').text
+            description = articleFullSoup.find('p', class_='lead').text
         item = Item(
             title = art.find('a', class_='color04').text.strip(),
             link = url,
-            description = art.find('div', class_='lead').text.strip(),
-            creator = 'Trojmiasto.pl (' + category + opinions + sponsored + ')',
+            description = description,
+            creator = author + ' (' + category + opinionsText + sponsoredText + ')',
             comments = url + '#opinions-wrap',
             categories = [ category ],
             guid = Guid(art.find('a').get('href')),
