@@ -30,7 +30,9 @@ for index, art in zip(range(limit), articlesSoup.find_all('li', class_='arch-ite
         if notSponsored:
             articleFull = requests.get(url)
             articleFullSoup = BeautifulSoup(articleFull.text, 'lxml')
-            author = articleFullSoup.find('span', class_='article-author').find('strong').text
+            authorSpan = articleFullSoup.find('span', class_='article-author')
+            if authorSpan != None:
+                author = authorSpan.find('strong').text
             description = articleFullSoup.find('p', class_='lead').text
             time.sleep(sleepInSeconds)
         item = Item(
