@@ -18,7 +18,10 @@ articles= requests.get(url)
 articlesSoup = BeautifulSoup(articles.text, 'lxml')
 
 for index, art in zip(range(limit), articlesSoup.find_all('li', class_='arch-item')):
-    category = art.find('div', class_='category').find('a').text.strip()
+    categoryA = art.find('div', class_='category').find('a')
+    category = ''
+    if categoryA != None:
+        category = categoryA.text.strip()
     if category.lower() not in skippedCategories:
         url = art.find('a').get('href')
         dateOpinions = art.find('span', class_='op-list')
