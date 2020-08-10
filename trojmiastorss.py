@@ -36,7 +36,10 @@ for index, art in zip(range(limit), articlesSoup.find_all('li', class_='arch-ite
             authorSpan = articleFullSoup.find('span', class_='article-author')
             if authorSpan != None:
                 author = authorSpan.find('strong').text
-            description = articleFullSoup.find('p', class_='lead').text
+            descriptionP = articleFullSoup.find('p', class_='lead')
+            description = ''
+            if descriptionP != None:
+                description = descriptionP.text
             time.sleep(sleepInSeconds)
         item = Item(
             title = art.find('a', class_='color04').text.strip(),
