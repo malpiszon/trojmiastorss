@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import requests
+import urllib3
 from bs4 import BeautifulSoup
 from rfeed import *
 import time
@@ -14,8 +14,9 @@ sleepInSeconds = 5
 skippedCategories = ['sport', 'deluxe']
 arts = []
 
-articles= requests.get(url)
-articlesSoup = BeautifulSoup(articles.text, 'lxml')
+http = urllib3.PoolManager()
+articles= http.request('GET', url)
+articlesSoup = BeautifulSoup(articles.data, 'lxml')
 
 for index, art in zip(range(limit), articlesSoup.find_all('li', class_='arch-item')):
     categoryA = art.find('div', class_='category').find('a')
@@ -31,8 +32,8 @@ for index, art in zip(range(limit), articlesSoup.find_all('li', class_='arch-ite
         author = '?'
         description = art.find('div', class_='lead').text.strip()
         if notSponsored:
-            articleFull = requests.get(url)
-            articleFullSoup = BeautifulSoup(articleFull.text, 'lxml')
+            articleFull = http.request('GET', url)
+            articleFullSoup = BeautifulSoup(articleFull.data, 'lxml')
             authorSpan = articleFullSoup.find('span', class_='article-author')
             if authorSpan != None:
                 author = authorSpan.find('strong').text
