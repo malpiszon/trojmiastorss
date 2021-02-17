@@ -31,6 +31,5 @@ jobs:
         ECR_REPOSITORY: rssgenerator
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest -t $ECR_REGISTRY/$ECR_REPOSITORY:stable -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY
+        docker buildx build --tag $ECR_REGISTRY/$ECR_REPOSITORY:latest --tag $ECR_REGISTRY/$ECR_REPOSITORY:stable --tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG --push .
         echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
