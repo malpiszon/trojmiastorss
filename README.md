@@ -7,4 +7,4 @@ Generate RSS from trojmiasto.pl
 * dateparser
 
 ## How to run
-Add to cron (invoke every few hours) and publish to a webpage.
+Run as lamda function with DynamoDB. Check env variables needed to be set.
