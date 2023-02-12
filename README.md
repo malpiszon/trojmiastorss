@@ -1,4 +1,4 @@
-# Trojmiastor.ss
+# Trojmiasto.rss
 Generate RSS from trojmiasto.pl
 
 ## Dependencies
