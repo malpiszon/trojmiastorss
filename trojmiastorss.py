@@ -26,12 +26,12 @@ def lambda_handler(event, context):
         KeyConditionExpression=Key('source').eq(SOURCE),
         ScanIndexForward=False,
         Limit=1,
-        ProjectionExpression='title'
+        ProjectionExpression='pubDate'
     )
     
-    lastItemTitle = 0
+    lastItemPubDate = 0
     if lastItem['Items']:
-        lastItemTitle = lastItem['Items'][0]['title']
+        lastItemPubDate = lastItem['Items'][0]['pubDate']
 
     items = 0
     for art in articlesSoup.find_all('article', class_='newsList__article'):
@@ -48,17 +48,12 @@ def lambda_handler(event, context):
             url = art.find('h4', class_='newsList__title').find('a').get('href')
             artId = int(url[-11:-5])
             title = art.find('h4', class_='newsList__title').find('span', class_='newsList__text').text.strip()
-            
-            if title == lastItemTitle:
-                break
-            
             opinionsText = '' if dateOpinions.find('b') == None else ', ' + dateOpinions.find('b').text + ' opinii'
             notSponsored = art.find('h4', class_='newsList__title').find('i', class_='trm-news-art-sponsorowany') == None
             sponsoredText = '' if notSponsored else ', SPONSOROWANY'
             author = '?'
             description = art.find('div', class_='newsList__content').find('p', class_='newsList__desc').text.strip()
-            artTtl = artTimestamp + int(TTL)
-            artDateId = artTimestamp*1000000+artId
+
             if notSponsored:
                 articleFull = http.request('GET', url)
                 articleFullSoup = BeautifulSoup(articleFull.data, 'lxml')
@@ -66,12 +61,23 @@ def lambda_handler(event, context):
                 authorDiv = articleFullSoup.find('div', class_='newsHeader__author')
                 if authorDiv != None:
                     author = authorDiv.text.strip()
+                dateDiv =articleFullSoup.find('div', class_='newsHeader__date')
+                if dateDiv != None:
+                    dateTime = dateparser.parse(dateDiv.text, languages=['pl'])
+                    if dateTime != None:
+                        artTimestamp = int(dateTime.timestamp())
                 titleH = articleFullSoup.find('h1', class_='newsHeader__title')
                 if titleH != None:
                     title = titleH.text
                 descriptionP = articleFullSoup.find('p', class_='lead')
                 if descriptionP != None:
                     description = descriptionP.text
+                    
+                if artTimestamp == lastItemPubDate:
+                    break
+                
+            artTtl = artTimestamp + int(TTL)
+            artDateId = artTimestamp*1000000+artId
             
             table.put_item(
                 Item={
@@ -93,4 +99,3 @@ def lambda_handler(event, context):
         'statusCode': 200,
         'insertedItems': items
     }
-
