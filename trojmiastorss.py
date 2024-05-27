@@ -26,12 +26,12 @@ def lambda_handler(event, context):
         KeyConditionExpression=Key('source').eq(SOURCE),
         ScanIndexForward=False,
         Limit=1,
-        ProjectionExpression='pubDate'
+        ProjectionExpression='title'
     )
     
-    lastItemPubDate = 0
+    lastItemTitle = 0
     if lastItem['Items']:
-        lastItemPubDate = int(lastItem['Items'][0]['pubDate'])
+        lastItemTitle = lastItem['Items'][0]['title']
 
     items = 0
     for art in articlesSoup.find_all('article', class_='newsList__article'):
@@ -39,8 +39,6 @@ def lambda_handler(event, context):
         dateText = dateOpinions.find('span', class_='newsList__date').text.strip()
         dateTime = dateparser.parse(dateText, languages=['pl'])
         artTimestamp = int(dateTime.timestamp())
-        if artTimestamp <= lastItemPubDate:
-            break
         
         categoryA = art.find('div', class_='newsList__tag').find('a')
         category = ''
@@ -50,6 +48,10 @@ def lambda_handler(event, context):
             url = art.find('h4', class_='newsList__title').find('a').get('href')
             artId = int(url[-11:-5])
             title = art.find('h4', class_='newsList__title').find('span', class_='newsList__text').text.strip()
+            
+            if title == lastItemTitle:
+                break
+            
             opinionsText = '' if dateOpinions.find('b') == None else ', ' + dateOpinions.find('b').text + ' opinii'
             notSponsored = art.find('h4', class_='newsList__title').find('i', class_='trm-news-art-sponsorowany') == None
             sponsoredText = '' if notSponsored else ', SPONSOROWANY'
@@ -60,9 +62,13 @@ def lambda_handler(event, context):
             if notSponsored:
                 articleFull = http.request('GET', url)
                 articleFullSoup = BeautifulSoup(articleFull.data, 'lxml')
+                
                 authorDiv = articleFullSoup.find('div', class_='newsHeader__author')
                 if authorDiv != None:
                     author = authorDiv.text.strip()
+                titleH = articleFullSoup.find('h1', class_='newsHeader__title')
+                if titleH != None:
+                    title = titleH.text
                 descriptionP = articleFullSoup.find('p', class_='lead')
                 if descriptionP != None:
                     description = descriptionP.text
@@ -87,3 +93,4 @@ def lambda_handler(event, context):
         'statusCode': 200,
         'insertedItems': items
     }
+
