@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import httpx
+import asyncio
 from bs4 import BeautifulSoup
 import time
 import os
@@ -16,7 +17,6 @@ TTL = os.environ['TTL']
 
 dynamodb = boto3.resource('dynamodb')
 articlesTable = dynamodb.Table('rss_headers')
-client = httpx.Client()
 
 
 class Article:
@@ -38,9 +38,8 @@ class Article:
         return self.category + self.opinionsText + sponsoredText
 
 
-def get_url_content(url):
-    response = client.get(url)
-
+async def get_url_content(client, url):
+    response = await client.get(url)
     if response.status_code == 103:
         print(f"103 Early Hint response for {url}, skipping...")
     elif not response.is_success:
@@ -51,8 +50,8 @@ def get_url_content(url):
     return None
 
 
-def update_from_full_article(item):
-    articleFull = get_url_content(item.url)
+async def update_from_full_article(client, item):
+    articleFull = await get_url_content(client, item.url)
     if articleFull != None:
         articleFullSoup = BeautifulSoup(articleFull, 'lxml')
 
@@ -80,17 +79,27 @@ def update_from_full_article(item):
             item.description = descriptionP.text
 
 
+async def update_items_from_articles(event, items):
+    async with httpx.AsyncClient() as client:
+        tasks = []
+        for item in items:
+            if item.notSponsored:
+                tasks.append(asyncio.create_task(update_from_full_article(client, item)))
+        await asyncio.gather(*tasks)
+
+
 def lambda_handler(event, context):
-    articles = client.get(URL)
-    if not articles.is_success:
-        return {
-            'statusCode': articles.status_code,
-            'body': 'Error when reading the source URL',
-            'errorUrl': URL
-        }
+    with httpx.Client() as client:
+        articles = client.get(URL)
+
+        if not articles.is_success:
+            return {
+                'statusCode': articles.status_code,
+                'body': 'Error when reading the source URL',
+                'errorUrl': URL
+            }
 
     articlesSoup = BeautifulSoup(articles.text, 'lxml')
-
     processedArticles = {}
     for art in articlesSoup.find_all('article', class_='newsList__article'):
         url = art.find('h4', class_='newsList__title').find('a').get('href')
@@ -99,7 +108,7 @@ def lambda_handler(event, context):
         if len(processedArticles) == 0:
             firstItemId = item.artId
 
-        if len(processedArticles) >= 10:  # TODO define variable
+        if len(processedArticles) >= 8:  # TODO define variable
             break
 
         if item.artId in processedArticles:
@@ -123,22 +132,18 @@ def lambda_handler(event, context):
                 item.notSponsored = art.find('h4', class_='newsList__title').find('i',
                                                                                   class_='trm-news-art-sponsorowany') == None
                 item.description = art.find('p', class_='newsList__desc').text.strip()
-
-                if item.notSponsored:
-                    update_from_full_article(item)
             else:
                 del processedArticles[item.artId]
 
         except Exception as e:
             print(f'error while reading {url} due to {repr(e)}')
-            client.close()
             return {
                 'statusCode': 503,
                 'body': repr(e),
                 'errorUrl': url
             }
 
-    client.close()
+    asyncio.run(update_items_from_articles(event, processedArticles.values()))
 
     with articlesTable.batch_writer() as batch:
         for art in processedArticles.values():
