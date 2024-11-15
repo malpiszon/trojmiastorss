@@ -17,22 +17,22 @@ TTL = os.environ['TTL']
 
 http = urllib3.PoolManager()
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table('rss')
+table = dynamodb.Table('rss_headers')
 
 def lambda_handler(event, context):
     articles = http.request('GET', URL)
     articlesSoup = BeautifulSoup(articles.data, 'lxml')
-    
+
     lastItem = table.query(
         KeyConditionExpression=Key('source').eq(SOURCE),
         ScanIndexForward=False,
         Limit=1,
-        ProjectionExpression='pubDate'
+        ProjectionExpression='artDateTime'
     )
     lastItemPubDate = 0
     if lastItem['Items']:
-        lastItemPubDate = int(lastItem['Items'][0]['pubDate'])
-    
+        lastItemPubDate = int(lastItem['Items'][0]['artDateTime'])
+
     items = 0
     for art in articlesSoup.find_all('li', class_='is-1z3'):
         artData = art.find('a', class_='tile-magazine-title-url')
@@ -43,7 +43,7 @@ def lambda_handler(event, context):
         if categoryA != None:
             category = categoryA.text.strip()
         author = AUTHOR
-        
+
         # fetch more info from the article itself
         fullUrl = FULL_TEXT_URL_DOMAIN + url
         articleFull = http.request('GET', fullUrl)
@@ -57,22 +57,22 @@ def lambda_handler(event, context):
 
         if artTimestmap <= lastItemPubDate:
             break
-        
-        artId = int(url[-7])
+
+        artId = int(url[-7:])
         artTtl = artTimestmap + int(TTL)
-        artDateId = artTimestmap*1000000+artId
-        
+
         table.put_item(
             Item={
                 'source': SOURCE,
-                'timestamp#id': artDateId,
+                'artId': artId,
+                'timestamp': artTimestmap,
                 'title': title,
                 'link': fullUrl,
                 'description': description,
                 'author': author,
                 'summary': category.capitalize(),
                 'category': category,
-                'pubDate': artTimestmap,
+                'artDateTime': artTimestmap,
                 'ttl': artTtl
             }
         )

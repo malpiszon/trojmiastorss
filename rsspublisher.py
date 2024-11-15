@@ -9,7 +9,7 @@ from boto3.dynamodb.conditions import Key
 VALID_SOURCES = os.environ['VALID_SOURCES'].split(',')
 
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table('rss')
+table = dynamodb.Table('rss_headers')
 
 def lambda_handler(event, context):
     if event == None or 'resource' not in event or len(event['resource']) < 2:
@@ -39,7 +39,7 @@ def lambda_handler(event, context):
             comments = art['link'] + '#opinie',
             categories = [ art['category'] ],
             guid = Guid(art['link']),
-            pubDate = datetime.fromtimestamp(art['pubDate'])
+            pubDate = datetime.fromtimestamp(art['artDateTime'])
         )
         itemsToPublish.append(item)
 
@@ -51,7 +51,6 @@ def lambda_handler(event, context):
         lastBuildDate = datetime.now(),
         items = itemsToPublish
     )
-
 
     return {
         'statusCode': 200,
